@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Load data based on view
             if (link.dataset.view === 'agents') loadAgents();
             if (link.dataset.view === 'documents') loadSources();
+            if (link.dataset.view === 'folders') loadFolders();
             if (link.dataset.view === 'skills') loadSkills();
             if (link.dataset.view === 'blocks') loadBlocks();
             if (link.dataset.view === 'map') loadMap();
@@ -77,6 +78,42 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error(`Error deleting ${endpoint}:`, error);
             return false;
+        }
+    }
+
+    // API Post Helper
+    async function apiPost(endpoint, body) {
+        try {
+            const response = await fetch(`${lettaServerUrl}${endpoint}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Error posting ${endpoint}:`, error);
+            return null;
+        }
+    }
+
+    // API Patch Helper
+    async function apiPatch(endpoint, body) {
+        try {
+            const response = await fetch(`${lettaServerUrl}${endpoint}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error(`Error patching ${endpoint}:`, error);
+            return null;
         }
     }
 
@@ -184,6 +221,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${createdAt}</td>
                 <td>
                     <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="alert('View ${name} not implemented yet')">View</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Load Folders
+    async function loadFolders() {
+        const tbody = document.getElementById('folders-list');
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Loading folders...</td></tr>';
+        
+        const folders = await apiGet('/v1/folders/');
+        
+        if (!folders) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Failed to load folders. Check server connection.</td></tr>';
+            return;
+        }
+
+        if (folders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No folders found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        folders.forEach(folder => {
+            const tr = document.createElement('tr');
+            
+            const name = folder.name || 'Unnamed Folder';
+            const createdAt = folder.created_at ? new Date(folder.created_at).toLocaleDateString() : '-';
+            
+            tr.innerHTML = `
+                <td><input type="checkbox" class="folder-checkbox" value="${folder.id}"></td>
+                <td><strong>${name}</strong></td>
+                <td>${createdAt}</td>
+                <td>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="openFolderModal('${folder.id}', '${name}')">Edit</button>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;" onclick="deleteFolder('${folder.id}', this)">Delete</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -318,6 +392,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Folder Modal Logic
+    document.getElementById('btn-add-folder').addEventListener('click', () => openFolderModal());
+    document.getElementById('btn-close-folder-modal').addEventListener('click', () => {
+        document.getElementById('folder-action-modal').classList.remove('active');
+    });
+    document.getElementById('folder-action-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'folder-action-modal') {
+            document.getElementById('folder-action-modal').classList.remove('active');
+        }
+    });
+
+    window.openFolderModal = function(id = '', currentName = '') {
+        document.getElementById('modal-folder-action-label').textContent = id ? 'Edit Folder' : 'Create Folder';
+        document.getElementById('folder-name-input').value = currentName;
+        document.getElementById('folder-id-input').value = id;
+        document.getElementById('folder-action-modal').classList.add('active');
+    };
+
+    document.getElementById('btn-save-folder').addEventListener('click', async (e) => {
+        const btn = e.target;
+        const nameInput = document.getElementById('folder-name-input').value.trim();
+        const idInput = document.getElementById('folder-id-input').value;
+        
+        if (!nameInput) {
+            alert('Folder name cannot be empty.');
+            return;
+        }
+
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        btn.disabled = true;
+
+        let success;
+        if (idInput) {
+            // Edit existing folder via PATCH or POST if required by Letta. Most standard REST is PATCH for update.
+            // Some versions of Letta might not support renaming, we'll try PATCH first.
+            success = await apiPatch(`/v1/folders/${idInput}`, { name: nameInput });
+            // Fallback to POST or PUT if patch fails might be needed, but PATCH is standard.
+        } else {
+            // Create new folder requires embedding_config
+            let embeddingModel = window.currentModels?.find(m => m.endpoint_type === 'embedding' || m.model?.includes('embed'));
+            let embeddingConfig = embeddingModel ? {
+                embedding_endpoint_type: embeddingModel.endpoint_type || "openai",
+                embedding_model: embeddingModel.model || "text-embedding-ada-002",
+                embedding_dim: 1536,
+                embedding_chunk_size: 300,
+                handle: embeddingModel.handle || `openai/${embeddingModel.model}`
+            } : {
+                embedding_endpoint_type: "openai",
+                embedding_model: "text-embedding-ada-002",
+                embedding_dim: 1536,
+                embedding_chunk_size: 300,
+                handle: "openai/text-embedding-ada-002"
+            };
+
+            success = await apiPost('/v1/folders/', { 
+                name: nameInput, 
+                embedding_config: embeddingConfig 
+            });
+        }
+
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+
+        if (success) {
+            document.getElementById('folder-action-modal').classList.remove('active');
+            loadFolders();
+        } else {
+            alert('Failed to save folder. It may not be supported by your Letta API version, or check server logs.');
+        }
+    });
+
     // Delete Operations
     window.deleteAgent = async function(id, btn) {
         if (confirm('Are you sure you want to delete this agent?')) {
@@ -354,6 +500,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn.disabled = false;
                 }
                 alert('Failed to delete block. Check server logs.');
+            }
+        }
+    };
+
+    window.deleteFolder = async function(id, btn) {
+        if (confirm('Are you sure you want to delete this folder?')) {
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                btn.disabled = true;
+            }
+            const success = await apiDelete(`/v1/folders/${id}`);
+            if (success) {
+                loadFolders();
+            } else {
+                if (btn) {
+                    btn.innerHTML = 'Delete';
+                    btn.disabled = false;
+                }
+                alert('Failed to delete folder. Check server logs.');
             }
         }
     };
@@ -590,6 +755,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     loadDashboard();
                 } else if (type === 'block') {
                     loadBlocks();
+                } else if (type === 'folder') {
+                    loadFolders();
                 }
             }
         });
@@ -598,6 +765,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize
     setupBulkDelete('agent');
     setupBulkDelete('block');
+    setupBulkDelete('folder');
     loadDashboard();
     
     // Status check every 30 seconds

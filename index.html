@@ -30,6 +30,9 @@
                 <li data-view="documents">
                     <i class="fa-solid fa-file-alt"></i> Documents
                 </li>
+                <li data-view="folders">
+                    <i class="fa-solid fa-folder-open"></i> Folders
+                </li>
                 <li data-view="skills">
                     <i class="fa-solid fa-code"></i> Skills
                 </li>
@@ -153,6 +156,40 @@
                             <tbody id="sources-list">
                                 <!-- Sources will be populated here -->
                                 <tr><td colspan="4" class="text-center text-muted">Loading sources...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Folders View -->
+            <section id="view-folders" class="view">
+                <header>
+                    <div class="header-split">
+                        <div>
+                            <h1>Folders</h1>
+                            <p class="subtitle">Manage organized collections of documents.</p>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" id="btn-delete-selected-folders" style="display: none; background: rgba(239, 68, 68, 0.2); color: #f87171;"><i class="fa-solid fa-trash"></i> Delete Selected</button>
+                            <button class="btn btn-primary" id="btn-add-folder"><i class="fa-solid fa-plus"></i> Create Folder</button>
+                        </div>
+                    </div>
+                </header>
+                <div class="content-panel glass">
+                    <div class="table-container">
+                        <table id="folders-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="select-all-folders"></th>
+                                    <th>Name</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="folders-list">
+                                <!-- Folders will be populated here -->
+                                <tr><td colspan="4" class="text-center text-muted">Loading folders...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -336,6 +373,25 @@
                     <h4>Raw Configuration</h4>
                     <pre id="modal-model-raw"></pre>
                 </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Folder Action Modal -->
+    <div class="modal-overlay" id="folder-action-modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h2 id="modal-folder-action-label">Create Folder</h2>
+                <button class="btn-close" id="btn-close-folder-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group" style="margin-bottom: 1rem;">
+                    <label for="folder-name-input" style="display: block; margin-bottom: 0.5rem; color: #cbd5e1;">Folder Name</label>
+                    <input type="text" id="folder-name-input" class="form-control" placeholder="Enter folder name" style="width: 100%; box-sizing: border-box; padding: 10px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.2); border-radius: 8px; color: #f8fafc;">
+                </div>
+                <input type="hidden" id="folder-id-input">
+                <button class="btn btn-primary" id="btn-save-folder" style="width: 100%; margin-top: 1rem;">Save Folder</button>
             </div>
         </div>
     </div>
