@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (link.dataset.view === 'skills') loadSkills();
             if (link.dataset.view === 'blocks') loadBlocks();
             if (link.dataset.view === 'map') loadMap();
+            if (link.dataset.view === 'models') loadModels();
             if (link.dataset.view === 'dashboard') loadDashboard();
         });
     });
@@ -59,6 +60,23 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error(`Error fetching ${endpoint}:`, error);
             return null;
+        }
+    }
+
+    // API Delete Helper
+    async function apiDelete(endpoint) {
+        try {
+            const response = await fetch(`${lettaServerUrl}${endpoint}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            return true;
+        } catch (error) {
+            console.error(`Error deleting ${endpoint}:`, error);
+            return false;
         }
     }
 
@@ -108,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (agents.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No agents found. Create one to get started!</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No agents found. Create one to get started!</td></tr>';
             return;
         }
 
@@ -122,12 +140,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const createdAt = agent.created_at ? new Date(agent.created_at).toLocaleDateString() : '-';
             
             tr.innerHTML = `
+                <td><input type="checkbox" class="agent-checkbox" value="${agent.id}"></td>
                 <td><strong>${name}</strong></td>
                 <td><span style="background: rgba(139, 92, 246, 0.2); color: #a78bfa; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${model}</span></td>
                 <td>${createdAt}</td>
                 <td>
                     <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="alert('Chat with ${name} not implemented yet')">Chat</button>
-                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;" onclick="alert('Delete ${name} not implemented yet')">Delete</button>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;" onclick="deleteAgent('${agent.id}', this)">Delete</button>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -209,6 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load Blocks
+    window.currentBlocks = [];
     async function loadBlocks() {
         const tbody = document.getElementById('blocks-list');
         tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Loading blocks...</td></tr>';
@@ -220,8 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        window.currentBlocks = blocks;
+
         if (blocks.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No shared blocks found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No shared blocks found.</td></tr>';
             return;
         }
 
@@ -234,16 +256,161 @@ document.addEventListener('DOMContentLoaded', () => {
             const limit = block.limit || 'Unlimited';
             
             tr.innerHTML = `
+                <td><input type="checkbox" class="block-checkbox" value="${block.id}"></td>
                 <td><strong>${label}</strong></td>
                 <td><span style="font-size: 0.85rem; color: var(--text-muted);">${value}</span></td>
                 <td>${limit}</td>
                 <td>
-                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="alert('Edit ${label} not implemented yet')">Edit</button>
+                    <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="showBlockDetails('${block.id}')">Details</button>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem; background: rgba(239, 68, 68, 0.2); color: #f87171;" onclick="deleteBlock('${block.id}', this)">Delete</button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     }
+
+    // Show Block Details Modal
+    window.showBlockDetails = async function(blockId) {
+        const block = window.currentBlocks.find(b => b.id === blockId);
+        if (!block) return;
+
+        document.getElementById('modal-block-label').textContent = block.label || 'Block Details';
+        document.getElementById('modal-block-value').textContent = block.value || 'Empty';
+        document.getElementById('modal-block-limit').textContent = block.limit || 'Unlimited';
+        
+        const agentsContainer = document.getElementById('modal-block-agents');
+        agentsContainer.innerHTML = '<span class="text-muted">Loading related agents...</span>';
+        
+        document.getElementById('block-modal').classList.add('active');
+
+        // Fetch agents to see who is using this block
+        const agents = await apiGet('/v1/agents');
+        if (agents) {
+            const relatedAgents = agents.filter(agent => JSON.stringify(agent).includes(blockId));
+            
+            if (relatedAgents.length > 0) {
+                agentsContainer.innerHTML = relatedAgents.map(a => `<span class="agent-tag"><i class="fa-solid fa-robot"></i> ${a.name}</span>`).join('');
+            } else {
+                agentsContainer.innerHTML = '<span class="text-muted">No agents currently using this block.</span>';
+            }
+        } else {
+            agentsContainer.innerHTML = '<span class="text-muted" style="color: var(--danger);">Failed to load agents.</span>';
+        }
+    };
+
+    // Close Modal Logic
+    document.getElementById('btn-close-modal').addEventListener('click', () => {
+        document.getElementById('block-modal').classList.remove('active');
+    });
+    document.getElementById('block-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'block-modal') {
+            document.getElementById('block-modal').classList.remove('active');
+        }
+    });
+
+    // Model Modal Close Logic
+    document.getElementById('btn-close-model-modal').addEventListener('click', () => {
+        document.getElementById('model-modal').classList.remove('active');
+    });
+    document.getElementById('model-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'model-modal') {
+            document.getElementById('model-modal').classList.remove('active');
+        }
+    });
+
+    // Delete Operations
+    window.deleteAgent = async function(id, btn) {
+        if (confirm('Are you sure you want to delete this agent?')) {
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                btn.disabled = true;
+            }
+            const success = await apiDelete(`/v1/agents/${id}`);
+            if (success) {
+                loadAgents();
+                loadDashboard(); // Refresh stats
+            } else {
+                if (btn) {
+                    btn.innerHTML = 'Delete';
+                    btn.disabled = false;
+                }
+                alert('Failed to delete agent. Check server logs.');
+            }
+        }
+    };
+
+    window.deleteBlock = async function(id, btn) {
+        if (confirm('Are you sure you want to delete this memory block?')) {
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                btn.disabled = true;
+            }
+            const success = await apiDelete(`/v1/blocks/${id}`);
+            if (success) {
+                loadBlocks();
+            } else {
+                if (btn) {
+                    btn.innerHTML = 'Delete';
+                    btn.disabled = false;
+                }
+                alert('Failed to delete block. Check server logs.');
+            }
+        }
+    };
+
+    // Load Models
+    window.currentModels = [];
+    async function loadModels() {
+        const tbody = document.getElementById('models-list');
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Loading models...</td></tr>';
+        
+        const models = await apiGet('/v1/models');
+        
+        if (!models) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Failed to load models. Check server connection.</td></tr>';
+            return;
+        }
+
+        window.currentModels = models;
+
+        if (models.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No models found.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = '';
+        models.forEach(model => {
+            const tr = document.createElement('tr');
+            
+            const name = model.model || 'Unnamed Model';
+            const provider = model.provider || 'Unknown';
+            const type = model.endpoint_type || (name.includes('embed') ? 'embedding' : 'llm');
+            
+            tr.innerHTML = `
+                <td><strong>${name}</strong></td>
+                <td>${provider}</td>
+                <td><span style="font-size: 0.85rem; padding: 4px 8px; border-radius: 4px; background: rgba(59, 130, 246, 0.2); color: #60a5fa;">${type}</span></td>
+                <td>
+                    <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="showModelDetails('${name}')">Details</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Show Model Details Modal
+    window.showModelDetails = function(modelName) {
+        const model = window.currentModels.find(m => m.model === modelName);
+        if (!model) return;
+
+        document.getElementById('modal-model-label').textContent = model.model || 'Model Details';
+        document.getElementById('modal-model-provider').textContent = model.provider || 'Unknown Provider';
+        document.getElementById('modal-model-endpoint').textContent = model.endpoint_type || 'N/A';
+        document.getElementById('modal-model-context').textContent = model.context_window ? `${model.context_window} tokens` : 'Unknown';
+        document.getElementById('modal-model-raw').textContent = JSON.stringify(model, null, 2);
+        
+        document.getElementById('model-modal').classList.add('active');
+    };
 
     // Load Map
     async function loadMap() {
@@ -359,7 +526,78 @@ document.addEventListener('DOMContentLoaded', () => {
         new vis.Network(container, data, options);
     }
 
+    // Multi-Select & Bulk Delete Logic
+    function setupBulkDelete(type) {
+        const selectAllCb = document.getElementById(`select-all-${type}s`);
+        const tableBody = document.getElementById(`${type}s-list`);
+        const deleteBtn = document.getElementById(`btn-delete-selected-${type}s`);
+
+        if(!selectAllCb || !tableBody || !deleteBtn) return;
+
+        // Select All Checkbox
+        selectAllCb.addEventListener('change', (e) => {
+            const checkboxes = tableBody.querySelectorAll(`.${type}-checkbox`);
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+            updateDeleteBtn();
+        });
+
+        // Individual Checkboxes
+        tableBody.addEventListener('change', (e) => {
+            if (e.target.classList.contains(`${type}-checkbox`)) {
+                updateDeleteBtn();
+            }
+        });
+
+        function updateDeleteBtn() {
+            const checkboxes = tableBody.querySelectorAll(`.${type}-checkbox:checked`);
+            if (checkboxes.length > 0) {
+                deleteBtn.style.display = 'inline-flex';
+                deleteBtn.innerHTML = `<i class="fa-solid fa-trash"></i> Delete Selected (${checkboxes.length})`;
+            } else {
+                deleteBtn.style.display = 'none';
+                selectAllCb.checked = false;
+            }
+        }
+
+        // Handle Bulk Delete
+        deleteBtn.addEventListener('click', async () => {
+            const checkboxes = tableBody.querySelectorAll(`.${type}-checkbox:checked`);
+            if (checkboxes.length === 0) return;
+            
+            if (confirm(`Are you sure you want to delete ${checkboxes.length} selected ${type}s?`)) {
+                deleteBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Deleting...`;
+                deleteBtn.disabled = true;
+                deleteBtn.style.opacity = '0.7';
+
+                let successCount = 0;
+                for (let cb of checkboxes) {
+                    const id = cb.value;
+                    const endpoint = type === 'agent' ? `/v1/agents/${id}` : `/v1/blocks/${id}`;
+                    const success = await apiDelete(endpoint);
+                    if (success) successCount++;
+                }
+                
+                deleteBtn.disabled = false;
+                deleteBtn.style.opacity = '1';
+                
+                alert(`Successfully deleted ${successCount} out of ${checkboxes.length} ${type}s.`);
+                
+                selectAllCb.checked = false;
+                deleteBtn.style.display = 'none';
+                
+                if (type === 'agent') {
+                    loadAgents();
+                    loadDashboard();
+                } else if (type === 'block') {
+                    loadBlocks();
+                }
+            }
+        });
+    }
+
     // Initialize
+    setupBulkDelete('agent');
+    setupBulkDelete('block');
     loadDashboard();
     
     // Status check every 30 seconds

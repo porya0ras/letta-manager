@@ -39,6 +39,9 @@
                 <li data-view="map">
                     <i class="fa-solid fa-network-wired"></i> Neural Map
                 </li>
+                <li data-view="models">
+                    <i class="fa-solid fa-brain"></i> Models
+                </li>
                 <li data-view="settings">
                     <i class="fa-solid fa-gear"></i> Settings
                 </li>
@@ -98,7 +101,10 @@
                             <h1>Agents</h1>
                             <p class="subtitle">Manage your autonomous agents.</p>
                         </div>
-                        <button class="btn btn-primary" id="btn-new-agent"><i class="fa-solid fa-plus"></i> Create Agent</button>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" id="btn-delete-selected-agents" style="display: none; background: rgba(239, 68, 68, 0.2); color: #f87171;"><i class="fa-solid fa-trash"></i> Delete Selected</button>
+                            <button class="btn btn-primary" id="btn-new-agent"><i class="fa-solid fa-plus"></i> Create Agent</button>
+                        </div>
                     </div>
                 </header>
                 <div class="content-panel glass">
@@ -106,6 +112,7 @@
                         <table id="agents-table">
                             <thead>
                                 <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="select-all-agents"></th>
                                     <th>Name</th>
                                     <th>Model</th>
                                     <th>Created At</th>
@@ -191,7 +198,10 @@
                             <h1>Shared Blocks</h1>
                             <p class="subtitle">Manage shared memory blocks (personas, humans).</p>
                         </div>
-                        <button class="btn btn-primary" id="btn-add-block"><i class="fa-solid fa-plus"></i> Add Block</button>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" id="btn-delete-selected-blocks" style="display: none; background: rgba(239, 68, 68, 0.2); color: #f87171;"><i class="fa-solid fa-trash"></i> Delete Selected</button>
+                            <button class="btn btn-primary" id="btn-add-block"><i class="fa-solid fa-plus"></i> Add Block</button>
+                        </div>
                     </div>
                 </header>
                 <div class="content-panel glass">
@@ -199,6 +209,7 @@
                         <table id="blocks-table">
                             <thead>
                                 <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="select-all-blocks"></th>
                                     <th>Label</th>
                                     <th>Value</th>
                                     <th>Limit</th>
@@ -225,6 +236,36 @@
                 </div>
             </section>
 
+            <!-- Models View -->
+            <section id="view-models" class="view">
+                <header>
+                    <div class="header-split">
+                        <div>
+                            <h1>Active Models</h1>
+                            <p class="subtitle">View language and embedding models connected to Letta.</p>
+                        </div>
+                    </div>
+                </header>
+                <div class="content-panel glass">
+                    <div class="table-container">
+                        <table id="models-table">
+                            <thead>
+                                <tr>
+                                    <th>Model Name</th>
+                                    <th>Provider</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="models-list">
+                                <!-- Models will be populated here -->
+                                <tr><td colspan="4" class="text-center text-muted">Loading models...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
             <!-- Settings View -->
             <section id="view-settings" class="view">
                 <header>
@@ -243,6 +284,60 @@
             </section>
 
         </main>
+    </div>
+
+    <!-- Block Details Modal -->
+    <div class="modal-overlay" id="block-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-block-label">Block Details</h2>
+                <button class="btn-close" id="btn-close-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-row">
+                    <h4>Value</h4>
+                    <pre id="modal-block-value"></pre>
+                </div>
+                <div class="detail-row">
+                    <h4>Limit</h4>
+                    <p id="modal-block-limit"></p>
+                </div>
+                <div class="detail-row">
+                    <h4>Related Agents</h4>
+                    <div id="modal-block-agents">
+                        <!-- Agent tags will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Model Details Modal -->
+    <div class="modal-overlay" id="model-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-model-label">Model Details</h2>
+                <button class="btn-close" id="btn-close-model-modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="detail-row">
+                    <h4>Provider</h4>
+                    <p id="modal-model-provider"></p>
+                </div>
+                <div class="detail-row">
+                    <h4>Endpoint Type</h4>
+                    <p id="modal-model-endpoint"></p>
+                </div>
+                <div class="detail-row">
+                    <h4>Context Window</h4>
+                    <p id="modal-model-context"></p>
+                </div>
+                <div class="detail-row">
+                    <h4>Raw Configuration</h4>
+                    <pre id="modal-model-raw"></pre>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="renderer.js"></script>

@@ -5,6 +5,8 @@ A premium, modern Linux desktop application built with Electron to manage and vi
 ![Letta Manager UI](https://img.shields.io/badge/UI-Glassmorphism-blue)
 ![Letta Manager Tech](https://img.shields.io/badge/Tech-Electron%20%7C%20Vanilla%20JS-green)
 
+![Neural Map Visualization](https://raw.githubusercontent.com/porya0ras/letta-manager/main/assets/neural-map.png)
+
 ## 🌟 Features
 
 -   **Dashboard:** Real-time overview of your server status, total agents, and data sources.
