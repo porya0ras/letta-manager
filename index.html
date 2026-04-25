@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letta Manager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+    <div id="titlebar">Letta Manager</div>
+    
+    <div class="app-container">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="logo">
+                <div class="logo-icon"><i class="fa-solid fa-microchip"></i></div>
+                <span>Letta Manager</span>
+            </div>
+            
+            <ul class="nav-links">
+                <li class="active" data-view="dashboard">
+                    <i class="fa-solid fa-chart-pie"></i> Dashboard
+                </li>
+                <li data-view="agents">
+                    <i class="fa-solid fa-robot"></i> Agents
+                </li>
+                <li data-view="documents">
+                    <i class="fa-solid fa-file-alt"></i> Documents
+                </li>
+                <li data-view="skills">
+                    <i class="fa-solid fa-code"></i> Skills
+                </li>
+                <li data-view="blocks">
+                    <i class="fa-solid fa-memory"></i> Blocks
+                </li>
+                <li data-view="map">
+                    <i class="fa-solid fa-network-wired"></i> Neural Map
+                </li>
+                <li data-view="settings">
+                    <i class="fa-solid fa-gear"></i> Settings
+                </li>
+            </ul>
+
+            <div class="server-status">
+                <div class="status-indicator"></div>
+                <span id="server-status-text">Checking server...</span>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            
+            <!-- Dashboard View -->
+            <section id="view-dashboard" class="view active-view">
+                <header>
+                    <h1>Dashboard</h1>
+                    <p class="subtitle">Overview of your Letta AI Server.</p>
+                </header>
+                
+                <div class="stats-grid">
+                    <div class="stat-card glass">
+                        <div class="stat-icon agents"><i class="fa-solid fa-users-gear"></i></div>
+                        <div class="stat-info">
+                            <h3>Total Agents</h3>
+                            <h2 id="stat-agents">--</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon sources"><i class="fa-solid fa-database"></i></div>
+                        <div class="stat-info">
+                            <h3>Total Sources</h3>
+                            <h2 id="stat-sources">--</h2>
+                        </div>
+                    </div>
+                    <div class="stat-card glass">
+                        <div class="stat-icon models"><i class="fa-solid fa-brain"></i></div>
+                        <div class="stat-info">
+                            <h3>Active Models</h3>
+                            <h2 id="stat-models">--</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-actions">
+                    <button class="btn btn-primary" id="btn-create-agent-dash"><i class="fa-solid fa-plus"></i> New Agent</button>
+                    <button class="btn btn-secondary" id="btn-upload-doc-dash"><i class="fa-solid fa-upload"></i> Upload Document</button>
+                </div>
+            </section>
+
+            <!-- Agents View -->
+            <section id="view-agents" class="view">
+                <header>
+                    <div class="header-split">
+                        <div>
+                            <h1>Agents</h1>
+                            <p class="subtitle">Manage your autonomous agents.</p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-new-agent"><i class="fa-solid fa-plus"></i> Create Agent</button>
+                    </div>
+                </header>
+                <div class="content-panel glass">
+                    <div class="table-container">
+                        <table id="agents-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Model</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agents-list">
+                                <!-- Agents will be populated here -->
+                                <tr><td colspan="4" class="text-center text-muted">Loading agents...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Documents View -->
+            <section id="view-documents" class="view">
+                <header>
+                    <div class="header-split">
+                        <div>
+                            <h1>Documents</h1>
+                            <p class="subtitle">Data sources available to agents.</p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-add-source"><i class="fa-solid fa-plus"></i> Add Source</button>
+                    </div>
+                </header>
+                <div class="content-panel glass">
+                    <div class="table-container">
+                        <table id="sources-table">
+                            <thead>
+                                <tr>
+                                    <th>Source Name</th>
+                                    <th>Description</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="sources-list">
+                                <!-- Sources will be populated here -->
+                                <tr><td colspan="4" class="text-center text-muted">Loading sources...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Skills View -->
+            <section id="view-skills" class="view">
+                <header>
+                    <div class="header-split">
+                        <div>
+                            <h1>Skills</h1>
+                            <p class="subtitle">Manage executable skills (tools) for agents.</p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-add-skill"><i class="fa-solid fa-plus"></i> Add Skill</button>
+                    </div>
+                </header>
+                <div class="content-panel glass">
+                    <div class="table-container">
+                        <table id="skills-table">
+                            <thead>
+                                <tr>
+                                    <th>Skill Name</th>
+                                    <th>Description</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="skills-list">
+                                <!-- Skills will be populated here -->
+                                <tr><td colspan="4" class="text-center text-muted">Loading skills...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Blocks View -->
+            <section id="view-blocks" class="view">
+                <header>
+                    <div class="header-split">
+                        <div>
+                            <h1>Shared Blocks</h1>
+                            <p class="subtitle">Manage shared memory blocks (personas, humans).</p>
+                        </div>
+                        <button class="btn btn-primary" id="btn-add-block"><i class="fa-solid fa-plus"></i> Add Block</button>
+                    </div>
+                </header>
+                <div class="content-panel glass">
+                    <div class="table-container">
+                        <table id="blocks-table">
+                            <thead>
+                                <tr>
+                                    <th>Label</th>
+                                    <th>Value</th>
+                                    <th>Limit</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="blocks-list">
+                                <!-- Blocks will be populated here -->
+                                <tr><td colspan="4" class="text-center text-muted">Loading blocks...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Map View -->
+            <section id="view-map" class="view">
+                <header>
+                    <h1>Neural Map</h1>
+                    <p class="subtitle">Visualizing connections between Agents and Memory Blocks.</p>
+                </header>
+                <div class="content-panel glass" style="padding: 0; overflow: hidden; height: 600px; position: relative;">
+                    <div id="network-graph" style="width: 100%; height: 100%; background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);"></div>
+                </div>
+            </section>
+
+            <!-- Settings View -->
+            <section id="view-settings" class="view">
+                <header>
+                    <h1>Settings</h1>
+                    <p class="subtitle">Configure connection to the Letta server.</p>
+                </header>
+                <div class="content-panel glass">
+                    <form id="settings-form">
+                        <div class="form-group">
+                            <label for="server-url">Letta Server URL</label>
+                            <input type="text" id="server-url" value="http://localhost:8283" class="form-control">
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-4">Save Configuration</button>
+                    </form>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>

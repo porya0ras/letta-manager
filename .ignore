@@ -1,0 +1,11 @@
+# General ignore file (for rg, fd, etc.)
+node_modules/
+dist/
+build/
+.git/
+.vscode/
+.idea/
+*.log
+.env*
+.DS_Store
+Thumbs.db
