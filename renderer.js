@@ -68,6 +68,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return 'python';
     }
 
+    function logServerRequest(method, endpoint, body = null) {
+        console.info('[Letta Server Request]', {
+            method,
+            url: `${lettaServerUrl}${endpoint}`,
+            ...(body ? { body } : {})
+        });
+    }
+
+    function logServerResponse(method, endpoint, response, body = null) {
+        console.info('[Letta Server Response]', {
+            method,
+            url: `${lettaServerUrl}${endpoint}`,
+            status: response.status,
+            ok: response.ok,
+            ...(body !== null ? { body } : {})
+        });
+    }
+
+    async function parseJsonResponse(method, endpoint, response) {
+        const body = await response.json();
+        logServerResponse(method, endpoint, response, body);
+        return body;
+    }
+
     // Navigation
     const navLinks = document.querySelectorAll('.nav-links li');
     const views = document.querySelectorAll('.view');
@@ -115,6 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // API Helper
     async function apiGet(endpoint) {
         try {
+            logServerRequest('GET', endpoint);
             const response = await fetch(`${lettaServerUrl}${endpoint}`, {
                 method: 'GET',
                 headers: {
@@ -122,7 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return await response.json();
+            return await parseJsonResponse('GET', endpoint, response);
         } catch (error) {
             console.error(`Error fetching ${endpoint}:`, error);
             return null;
@@ -132,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // API Delete Helper
     async function apiDelete(endpoint) {
         try {
+            logServerRequest('DELETE', endpoint);
             const response = await fetch(`${lettaServerUrl}${endpoint}`, {
                 method: 'DELETE',
                 headers: {
@@ -139,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+            logServerResponse('DELETE', endpoint, response);
             return true;
         } catch (error) {
             console.error(`Error deleting ${endpoint}:`, error);
@@ -149,6 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // API Post Helper
     async function apiPost(endpoint, body) {
         try {
+            logServerRequest('POST', endpoint, body);
             const response = await fetch(`${lettaServerUrl}${endpoint}`, {
                 method: 'POST',
                 headers: {
@@ -157,7 +185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(body)
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return await response.json();
+            return await parseJsonResponse('POST', endpoint, response);
         } catch (error) {
             console.error(`Error posting ${endpoint}:`, error);
             return null;
@@ -167,6 +195,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // API Patch Helper
     async function apiPatch(endpoint, body) {
         try {
+            logServerRequest('PATCH', endpoint, body);
             const response = await fetch(`${lettaServerUrl}${endpoint}`, {
                 method: 'PATCH',
                 headers: {
@@ -175,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify(body)
             });
             if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-            return await response.json();
+            return await parseJsonResponse('PATCH', endpoint, response);
         } catch (error) {
             console.error(`Error patching ${endpoint}:`, error);
             return null;
@@ -189,7 +218,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             // Letta server usually responds to base URL or /v1/models to verify it's up
+            logServerRequest('GET', '/v1/models');
             const response = await fetch(`${lettaServerUrl}/v1/models`, { method: 'GET' });
+            logServerResponse('GET', '/v1/models', response);
             if (response.ok) {
                 statusIndicator.className = 'status-indicator online';
                 statusText.textContent = 'Server Online';
