@@ -291,6 +291,22 @@ header .subtitle {
     transform: translateY(-2px);
 }
 
+.btn-compact {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    justify-content: center;
+}
+
+.danger-soft {
+    background: rgba(239, 68, 68, 0.16);
+    color: #f87171;
+}
+
+.danger-soft:hover {
+    background: rgba(239, 68, 68, 0.24);
+}
+
 .dashboard-actions {
     display: flex;
     gap: 16px;
@@ -300,6 +316,117 @@ header .subtitle {
 .content-panel {
     padding: 24px;
     min-height: 400px;
+}
+
+.skills-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+.skill-define-panel,
+.skill-list-panel {
+    min-height: 0;
+}
+
+.skill-define-panel {
+    padding: 22px 24px;
+}
+
+.panel-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.panel-title-row h2 {
+    font-size: 1.15rem;
+    margin-bottom: 4px;
+}
+
+.skill-path-row {
+    margin-bottom: 18px;
+}
+
+.path-loader {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+
+.skill-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(460px, 1.55fr) minmax(300px, 0.75fr);
+    gap: 22px;
+    align-items: start;
+}
+
+.skill-code-pane label,
+.skill-settings-pane label {
+    font-size: 0.82rem;
+}
+
+.skill-options-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.code-editor {
+    max-width: none;
+    min-height: 300px;
+    height: 300px;
+    resize: vertical;
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    white-space: pre;
+}
+
+.compact-textarea {
+    max-width: none;
+    min-height: 88px;
+    resize: vertical;
+    line-height: 1.45;
+}
+
+.checkbox-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+}
+
+.checkbox-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.skill-toggle-row {
+    margin: 2px 0 18px;
+}
+
+.form-status {
+    min-height: 20px;
+    margin-top: 12px;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.form-status.success {
+    color: var(--success);
+}
+
+.form-status.warning {
+    color: #fbbf24;
+}
+
+.form-status.error {
+    color: var(--danger);
 }
 
 /* Tables */
@@ -334,6 +461,46 @@ tbody tr:hover {
     background-color: rgba(255, 255, 255, 0.03);
 }
 
+.table-actions {
+    display: inline-flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.type-pill {
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+}
+
+#skills-table th:nth-child(1),
+#skills-table td:nth-child(1) {
+    width: 28%;
+    min-width: 240px;
+}
+
+#skills-table th:nth-child(2),
+#skills-table td:nth-child(2) {
+    width: 50%;
+}
+
+#skills-table th:nth-child(3),
+#skills-table td:nth-child(3) {
+    width: 90px;
+}
+
+#skills-table th:nth-child(4),
+#skills-table td:nth-child(4) {
+    width: 120px;
+}
+
+#skills-table th:nth-child(5),
+#skills-table td:nth-child(5) {
+    width: 120px;
+}
+
 /* Form Controls */
 .form-group {
     margin-bottom: 20px;
@@ -358,6 +525,10 @@ label {
     font-size: 1rem;
     font-family: inherit;
     transition: border-color 0.2s ease;
+}
+
+.form-control-wide {
+    max-width: none;
 }
 
 .form-control:focus {
@@ -473,4 +644,25 @@ label {
     font-size: 0.85rem;
     margin-right: 8px;
     margin-bottom: 8px;
+}
+
+@media (max-width: 1180px) {
+    .skill-editor-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 780px) {
+    .panel-title-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .path-loader {
+        grid-template-columns: 1fr;
+    }
+
+    .skill-options-grid {
+        grid-template-columns: 1fr;
+    }
 }

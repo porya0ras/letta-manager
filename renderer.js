@@ -1,7 +1,72 @@
 document.addEventListener('DOMContentLoaded', () => {
+    const { ipcRenderer } = require('electron');
+
     // State
     let lettaServerUrl = localStorage.getItem('lettaServerUrl') || 'http://localhost:8283';
     document.getElementById('server-url').value = lettaServerUrl;
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function parseTags(value) {
+        return value
+            .split(',')
+            .map(tag => tag.trim())
+            .filter(Boolean);
+    }
+
+    function formatPipRequirements(requirements = []) {
+        return requirements
+            .map(req => req.version ? `${req.name}==${req.version}` : req.name)
+            .join(', ');
+    }
+
+    function formatNpmRequirements(requirements = []) {
+        return requirements
+            .map(req => req.version ? `${req.name}@${req.version}` : req.name)
+            .join(', ');
+    }
+
+    function parsePipRequirements(value) {
+        return value
+            .split(',')
+            .map(item => item.trim())
+            .filter(Boolean)
+            .map(item => {
+                const [name, version] = item.split('==').map(part => part.trim());
+                return version ? { name, version } : { name };
+            });
+    }
+
+    function parseNpmRequirements(value) {
+        return value
+            .split(',')
+            .map(item => item.trim())
+            .filter(Boolean)
+            .map(item => {
+                const versionSeparator = item.lastIndexOf('@');
+                if (versionSeparator > 0) {
+                    return {
+                        name: item.slice(0, versionSeparator),
+                        version: item.slice(versionSeparator + 1)
+                    };
+                }
+                return { name: item };
+            });
+    }
+
+    function detectSourceType(filePath = '') {
+        const sourcePath = filePath.toLowerCase();
+        if (sourcePath.endsWith('.js')) return 'javascript';
+        if (sourcePath.endsWith('.ts')) return 'typescript';
+        return 'python';
+    }
 
     // Navigation
     const navLinks = document.querySelectorAll('.nav-links li');
@@ -265,19 +330,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Load Skills
+    window.currentTools = [];
     async function loadSkills() {
         const tbody = document.getElementById('skills-list');
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Loading skills...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading skills...</td></tr>';
         
         const tools = await apiGet('/v1/tools');
         
         if (!tools) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Failed to load skills. Check server connection.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Failed to load skills. Check server connection.</td></tr>';
             return;
         }
 
+        window.currentTools = tools;
+
         if (tools.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No skills found.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No skills found.</td></tr>';
             return;
         }
 
@@ -287,14 +355,19 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const name = tool.name || 'Unnamed Skill';
             const description = tool.description || 'No description';
+            const sourceType = tool.source_type || 'python';
             const createdAt = tool.created_at ? new Date(tool.created_at).toLocaleDateString() : '-';
             
             tr.innerHTML = `
-                <td><strong>${name}</strong></td>
-                <td><span style="font-size: 0.85rem; color: var(--text-muted);">${description}</span></td>
+                <td><strong>${escapeHtml(name)}</strong></td>
+                <td><span style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(description)}</span></td>
+                <td><span class="type-pill">${escapeHtml(sourceType)}</span></td>
                 <td>${createdAt}</td>
                 <td>
-                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="alert('Edit ${name} not implemented yet')">Edit</button>
+                    <div class="table-actions">
+                        <button class="btn btn-primary btn-compact" title="Edit skill" onclick="editSkill('${tool.id}')"><i class="fa-solid fa-pen"></i></button>
+                        <button class="btn btn-secondary btn-compact danger-soft" title="Delete skill" onclick="deleteSkill('${tool.id}', this)"><i class="fa-solid fa-trash"></i></button>
+                    </div>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -464,7 +537,172 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Skill Define Panel Logic
+    function setSkillStatus(message = '', type = '') {
+        const status = document.getElementById('skill-form-status');
+        status.textContent = message;
+        status.className = `form-status ${type}`.trim();
+    }
+
+    function resetSkillForm() {
+        document.getElementById('skill-form-title').textContent = 'Define Skill';
+        document.getElementById('skill-form-subtitle').textContent = 'Create or update a Letta tool from source code.';
+        document.getElementById('skill-id-input').value = '';
+        document.getElementById('skill-description-input').value = '';
+        document.getElementById('skill-tags-input').value = '';
+        document.getElementById('skill-pip-input').value = '';
+        document.getElementById('skill-npm-input').value = '';
+        document.getElementById('skill-source-type-input').value = 'python';
+        document.getElementById('skill-return-limit-input').value = 50000;
+        document.getElementById('skill-approval-input').checked = false;
+        document.getElementById('skill-parallel-input').checked = false;
+        document.getElementById('skill-path-input').value = '';
+        document.getElementById('skill-source-input').value = '';
+        setSkillStatus('');
+    }
+
+    function applyLoadedSkillSource(result) {
+        if (!result) return;
+
+        document.getElementById('skill-path-input').value = result.path;
+        document.getElementById('skill-source-input').value = result.content;
+        document.getElementById('skill-source-type-input').value = detectSourceType(result.path);
+
+        if (result.pipRequirements?.length) {
+            document.getElementById('skill-pip-input').value = formatPipRequirements(result.pipRequirements);
+        }
+        if (result.npmRequirements?.length) {
+            document.getElementById('skill-npm-input').value = formatNpmRequirements(result.npmRequirements);
+        }
+
+        const warningText = result.warnings?.length ? ` ${result.warnings.join(' ')}` : '';
+        setSkillStatus(`Loaded source from ${result.path}.${warningText}`, result.warnings?.length ? 'warning' : 'success');
+    }
+
+    document.getElementById('btn-new-skill').addEventListener('click', resetSkillForm);
+    document.getElementById('btn-reset-skill').addEventListener('click', resetSkillForm);
+    document.getElementById('btn-refresh-skills').addEventListener('click', loadSkills);
+
+    document.getElementById('btn-read-skill-path').addEventListener('click', async () => {
+        const targetPath = document.getElementById('skill-path-input').value.trim();
+        if (!targetPath) {
+            setSkillStatus('Enter a file or folder path first.', 'error');
+            return;
+        }
+
+        try {
+            setSkillStatus('Loading source path...');
+            const result = await ipcRenderer.invoke('read-skill-source-path', targetPath);
+            applyLoadedSkillSource(result);
+        } catch (error) {
+            setSkillStatus(error.message || 'Failed to read skill source path.', 'error');
+        }
+    });
+
+    window.editSkill = async function(id = '') {
+        const tool = id ? window.currentTools.find(t => t.id === id) : null;
+        document.getElementById('skill-form-title').textContent = id ? `Edit ${tool?.name || 'Skill'}` : 'Define Skill';
+        document.getElementById('skill-form-subtitle').textContent = id ? 'Update an existing Letta tool.' : 'Create or update a Letta tool from source code.';
+        document.getElementById('skill-id-input').value = id;
+        document.getElementById('skill-description-input').value = tool?.description || '';
+        document.getElementById('skill-tags-input').value = (tool?.tags || []).join(', ');
+        document.getElementById('skill-pip-input').value = formatPipRequirements(tool?.pip_requirements || []);
+        document.getElementById('skill-npm-input').value = formatNpmRequirements(tool?.npm_requirements || []);
+        document.getElementById('skill-source-type-input').value = tool?.source_type || 'python';
+        document.getElementById('skill-return-limit-input').value = tool?.return_char_limit || 50000;
+        document.getElementById('skill-approval-input').checked = Boolean(tool?.default_requires_approval);
+        document.getElementById('skill-parallel-input').checked = Boolean(tool?.enable_parallel_execution);
+        document.getElementById('skill-path-input').value = '';
+        document.getElementById('skill-source-input').value = tool?.source_code || '';
+        setSkillStatus(id ? 'Loaded selected skill into the editor.' : '');
+
+        if (id && !tool?.source_code) {
+            setSkillStatus('Loading full skill source...');
+            const fullTool = await apiGet(`/v1/tools/${id}`);
+            if (fullTool) {
+                Object.assign(tool || {}, fullTool);
+                document.getElementById('skill-description-input').value = fullTool.description || '';
+                document.getElementById('skill-tags-input').value = (fullTool.tags || []).join(', ');
+                document.getElementById('skill-pip-input').value = formatPipRequirements(fullTool.pip_requirements || []);
+                document.getElementById('skill-npm-input').value = formatNpmRequirements(fullTool.npm_requirements || []);
+                document.getElementById('skill-source-type-input').value = fullTool.source_type || 'python';
+                document.getElementById('skill-return-limit-input').value = fullTool.return_char_limit || 50000;
+                document.getElementById('skill-approval-input').checked = Boolean(fullTool.default_requires_approval);
+                document.getElementById('skill-parallel-input').checked = Boolean(fullTool.enable_parallel_execution);
+                document.getElementById('skill-source-input').value = fullTool.source_code || '';
+                setSkillStatus('Loaded selected skill into the editor.');
+            } else {
+                setSkillStatus('Failed to load full skill source.', 'error');
+            }
+        }
+
+        document.getElementById('skill-source-input').focus();
+    };
+
+    document.getElementById('btn-save-skill').addEventListener('click', async (e) => {
+        const btn = e.target;
+        const id = document.getElementById('skill-id-input').value;
+        const sourceCode = document.getElementById('skill-source-input').value.trim();
+
+        if (!sourceCode) {
+            setSkillStatus('Skill source code cannot be empty.', 'error');
+            return;
+        }
+
+        const returnLimit = Number(document.getElementById('skill-return-limit-input').value) || 50000;
+        const payload = {
+            source_code: sourceCode,
+            source_type: document.getElementById('skill-source-type-input').value,
+            description: document.getElementById('skill-description-input').value.trim() || null,
+            tags: parseTags(document.getElementById('skill-tags-input').value),
+            pip_requirements: parsePipRequirements(document.getElementById('skill-pip-input').value),
+            npm_requirements: parseNpmRequirements(document.getElementById('skill-npm-input').value),
+            return_char_limit: Math.min(Math.max(returnLimit, 1), 1000000),
+            default_requires_approval: document.getElementById('skill-approval-input').checked,
+            enable_parallel_execution: document.getElementById('skill-parallel-input').checked
+        };
+
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+        btn.disabled = true;
+        setSkillStatus(id ? 'Updating skill...' : 'Creating skill...');
+
+        const saved = id ? await apiPatch(`/v1/tools/${id}`, payload) : await apiPost('/v1/tools/', payload);
+
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+
+        if (saved) {
+            document.getElementById('skill-id-input').value = saved.id || id;
+            document.getElementById('skill-form-title').textContent = `Edit ${saved.name || 'Skill'}`;
+            document.getElementById('skill-form-subtitle').textContent = 'Update an existing Letta tool.';
+            setSkillStatus('Skill saved.', 'success');
+            loadSkills();
+        } else {
+            setSkillStatus('Failed to save skill. Check the source code and Letta server logs.', 'error');
+        }
+    });
+
     // Delete Operations
+    window.deleteSkill = async function(id, btn) {
+        if (confirm('Are you sure you want to delete this skill?')) {
+            if (btn) {
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+                btn.disabled = true;
+            }
+            const success = await apiDelete(`/v1/tools/${id}`);
+            if (success) {
+                loadSkills();
+            } else {
+                if (btn) {
+                    btn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+                    btn.disabled = false;
+                }
+                alert('Failed to delete skill. Check server logs.');
+            }
+        }
+    };
+
     window.deleteAgent = async function(id, btn) {
         if (confirm('Are you sure you want to delete this agent?')) {
             if (btn) {

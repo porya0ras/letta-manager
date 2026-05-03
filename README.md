@@ -13,7 +13,7 @@ A premium, modern Linux desktop application built with Electron to manage and vi
 -   **Agent Management:** View and manage your autonomous agents and their configurations.
 -   **Neural Map:** Interactive, physics-based visualization of your agent-memory network ( neuronal network style).
 -   **Memory Blocks:** Manage shared memory blocks like personas and human contexts.
--   **Skills (Tools):** Monitor and manage executable skills available to your agents.
+-   **Skills (Tools):** Define, edit, delete, and load executable skills from local source files or folders.
 -   **Documents (Sources):** View and manage data sources for RAG and agent context.
 -   **Modern UI:** Sleek glassmorphism design with a dark mode aesthetic, smooth animations, and Inter typography.
 

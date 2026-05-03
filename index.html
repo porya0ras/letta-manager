@@ -204,25 +204,96 @@
                             <h1>Skills</h1>
                             <p class="subtitle">Manage executable skills (tools) for agents.</p>
                         </div>
-                        <button class="btn btn-primary" id="btn-add-skill"><i class="fa-solid fa-plus"></i> Add Skill</button>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-secondary" id="btn-refresh-skills"><i class="fa-solid fa-rotate"></i> Refresh</button>
+                            <button class="btn btn-primary" id="btn-new-skill"><i class="fa-solid fa-plus"></i> New Skill</button>
+                        </div>
                     </div>
                 </header>
-                <div class="content-panel glass">
-                    <div class="table-container">
-                        <table id="skills-table">
-                            <thead>
-                                <tr>
-                                    <th>Skill Name</th>
-                                    <th>Description</th>
-                                    <th>Created At</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="skills-list">
-                                <!-- Skills will be populated here -->
-                                <tr><td colspan="4" class="text-center text-muted">Loading skills...</td></tr>
-                            </tbody>
-                        </table>
+
+                <div class="skills-layout">
+                    <div class="content-panel glass skill-define-panel">
+                        <div class="panel-title-row">
+                            <div>
+                                <h2 id="skill-form-title">Define Skill</h2>
+                                <p id="skill-form-subtitle" class="text-muted">Create or update a Letta tool from source code.</p>
+                            </div>
+                            <button class="btn btn-secondary" id="btn-reset-skill"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                        </div>
+
+                        <input type="hidden" id="skill-id-input">
+                        <div class="path-loader skill-path-row">
+                            <input type="text" id="skill-path-input" class="form-control form-control-wide" placeholder="/path/to/tool.py or folder">
+                            <button class="btn btn-secondary" id="btn-read-skill-path"><i class="fa-solid fa-file-import"></i> Load Source</button>
+                        </div>
+
+                        <div class="skill-editor-grid">
+                            <div class="skill-code-pane">
+                                <label for="skill-source-input">Source Code</label>
+                                <textarea id="skill-source-input" class="form-control code-editor skill-code-editor" spellcheck="false" placeholder="def my_skill(text: str) -> str:&#10;    return text"></textarea>
+                            </div>
+
+                            <div class="skill-settings-pane">
+                                <div class="form-group">
+                                    <label for="skill-description-input">Description</label>
+                                    <textarea id="skill-description-input" class="form-control form-control-wide compact-textarea" spellcheck="false" placeholder="What this skill does"></textarea>
+                                </div>
+                                <div class="skill-options-grid">
+                                    <div class="form-group">
+                                        <label for="skill-source-type-input">Source Type</label>
+                                        <select id="skill-source-type-input" class="form-control">
+                                            <option value="python">Python</option>
+                                            <option value="javascript">JavaScript</option>
+                                            <option value="typescript">TypeScript</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="skill-return-limit-input">Return Limit</label>
+                                        <input type="number" min="1" max="1000000" id="skill-return-limit-input" class="form-control" value="50000">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="skill-tags-input">Tags</label>
+                                    <input type="text" id="skill-tags-input" class="form-control form-control-wide" placeholder="local, utility">
+                                </div>
+                                <div class="skill-options-grid">
+                                    <div class="form-group">
+                                        <label for="skill-pip-input">Pip</label>
+                                        <input type="text" id="skill-pip-input" class="form-control form-control-wide" placeholder="requests==2.32.3, numpy">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="skill-npm-input">NPM</label>
+                                        <input type="text" id="skill-npm-input" class="form-control form-control-wide" placeholder="lodash@4.17.21">
+                                    </div>
+                                </div>
+                                <div class="checkbox-row skill-toggle-row">
+                                    <label><input type="checkbox" id="skill-approval-input"> Requires approval</label>
+                                    <label><input type="checkbox" id="skill-parallel-input"> Parallel execution</label>
+                                </div>
+                                <button class="btn btn-primary" id="btn-save-skill"><i class="fa-solid fa-floppy-disk"></i> Save Skill</button>
+                            </div>
+                        </div>
+                        <p id="skill-form-status" class="form-status"></p>
+                    </div>
+
+                    <div class="content-panel glass skill-list-panel">
+                        <div class="table-container">
+                            <table id="skills-table">
+                                <thead>
+                                    <tr>
+                                        <th>Skill Name</th>
+                                        <th>Description</th>
+                                        <th>Type</th>
+                                        <th>Created At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="skills-list">
+                                    <!-- Skills will be populated here -->
+                                    <tr><td colspan="5" class="text-center text-muted">Loading skills...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </section>
